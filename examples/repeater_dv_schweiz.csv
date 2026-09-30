@@ -1,0 +1,4 @@
+Group No,Group Name,Name,Sub Name,Repeater Call Sign,Gateway Call Sign,Frequency,Dup,Offset,Mode,TONE,Repeater Tone,RPT1USE,Position,Latitude,Longitude,UTC Offset
+1,DV Schweiz,Braunau TG,HB9HD  C,HB9HD  C,HB9HD  G,145.587500,DUP-,0.600000,DV,OFF,88.5Hz,YES,Exact,47.495683,9.081583,+1:00
+1,DV Schweiz,Brienzer Rothorn,HB9F   B,HB9F   B,HB9F   G,439.525000,DUP-,7.600000,DV,OFF,88.5Hz,YES,Exact,46.787150,8.044533,+1:00
+1,DV Schweiz,Brienzer Rothorn,HB9F   C,HB9F   C,HB9F   G,145.612500,DUP-,0.600000,DV,OFF,88.5Hz,YES,Exact,46.787150,8.044533,+1:00

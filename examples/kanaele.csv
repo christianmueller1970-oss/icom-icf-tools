@@ -1,0 +1,8 @@
+Ch,Name,RX,Shift,Offset,Mode,Tone,RTone,CTone,DTCS,URCALL,RPT1,RPT2,Bank,Skip,Step
+0,S20 145.500,145.5000,,,FM,,,,,,,,A,,12.5
+1,S22 145.550,145.5500,,,FM,,,,,,,,A,,12.5
+2,HB9HD Braunau,438.9250,-,7.600,FM,Tone,71.9,,,,,,B,,12.5
+3,HB9F Schilthorn,145.7000,-,0.600,FM,Tone,94.8,,,,,,B,,12.5
+4,HB9BG Falkenfluh,438.6125,-,7.600,FM,DTCS,,,073,,,,B,,12.5
+5,HB9HD Braunau DV,145.5875,-,0.600,DV,,,,,CQCQCQ,HB9HD  C,HB9HD  G,C,,12.5
+6,HB9F Rothorn DV,439.5250,-,7.600,DV,,,,,CQCQCQ,HB9F   B,HB9F   G,C,,12.5

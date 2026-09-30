@@ -1,0 +1,5 @@
+# make_device_lists.py: nur für Excel-Master
+openpyxl
+# build_icf.py / build_rptlist.py brauchen CHIRP aus den Quellen (siehe README):
+#   git clone https://github.com/kk7ds/chirp.git chirp-src
+#   pip install future pyserial requests
