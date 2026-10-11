@@ -2,11 +2,11 @@
 
 Werkzeuge und Dokumentation, um Icom-D-STAR-Geräte **ohne Windows und ohne Kabel** über die
 SD-Karte zu programmieren: Speicherkanäle und DR-Repeaterliste für den Original-**ID-51**
-direkt im ICF-Cloning-File, und importfertige Repeaterlisten-CSV für **ID-52, IC-705,
+und **ID-31** direkt im ICF-Cloning-File, und importfertige Repeaterlisten-CSV für **ID-52, IC-705,
 ID-5100 und IC-9700**.
 
 *English summary:* Tools and notes for programming Icom D-STAR radios via SD card. Includes
-a writer for the D-STAR repeater list of the original ID-51 (which has no CSV import) –
+a writer for the D-STAR repeater list of the original ID-51 and ID-31 (which have no CSV import) –
 the memory layout is documented in `docs/ID-51_Repeaterliste.md` – and a generator for
 device-specific repeater-list CSV files (ID-52, IC-705, ID-5100, IC-9700). GPLv3, uses CHIRP.
 
@@ -16,10 +16,10 @@ Hintergrund: [Ein ID-51, eine SD-Karte und keine Windows-Kiste](https://www.funk
 
 | Datei | Zweck |
 |---|---|
-| `tools/build_icf.py` | ID-51: Speicherkanäle, Banknamen und MY CALL aus einer CSV in ein ICF schreiben (Basis: ICF vom eigenen Gerät) |
-| `tools/build_rptlist.py` | ID-51: D-STAR-Repeaterliste (bis 750 Einträge, 25 Gruppen) aus Icom-CSV ins ICF schreiben; `--dump` zeigt die Liste eines ICF |
+| `tools/build_icf.py` | ID-51 / ID-31: Speicherkanäle, Banknamen und MY CALL aus einer CSV in ein ICF schreiben (Basis: ICF vom eigenen Gerät, Modell wird erkannt) |
+| `tools/build_rptlist.py` | ID-51 / ID-31: D-STAR-Repeaterliste (ID-51 bis 750 Einträge in 25 Gruppen, ID-31 bis 700 in 20) aus Icom-CSV ins ICF schreiben; `--dump` zeigt die Liste eines ICF |
 | `tools/make_device_lists.py` | Aus einer Master-Repeaterliste die Import-CSV für ID-52E, IC-705, ID-5100 und IC-9700 erzeugen – im jeweiligen Geräteformat und so normalisiert, dass der Import ohne «data was corrected» durchläuft |
-| `docs/ID-51_Repeaterliste.md` | Speicherlayout der ID-51-Repeaterliste (reverse engineered, am Gerät verifiziert) |
+| `docs/ID-51_Repeaterliste.md` | Speicherlayout der Repeaterliste von ID-51 (am Gerät verifiziert) und ID-31 (am Gerät getestet) |
 | `docs/Icom-CSV-Formate.md` | CSV-Formate der Geräte, was das Gerät beim Import anpasst, bewährter Ablauf |
 | `docs/ICF-Format.md` | ICF-Grundlagen, Stolpersteine auf der SD-Karte (Dateiname, macOS `._`-Dateien) |
 | `examples/` | Beispiel-Kanalliste, Banknamen, Repeaterliste, Master |
@@ -48,10 +48,15 @@ python3 tools/build_icf.py --base MeinID51.icf --dump
 python3 tools/build_icf.py --base MeinID51.icf --csv examples/kanaele.csv \
     --banks examples/banken.csv --mycall HB9XYZ --out Set20260101_02.icf
 
-# ID-51: Repeaterliste ersetzen (Gruppen aus einem ID-52-Export übernehmen, Gruppe 1 ersetzen)
+# ID-51: Repeaterliste ersetzen (alte Form, weiterhin gültig) (Gruppen aus einem ID-52-Export übernehmen, Gruppe 1 ersetzen)
 python3 tools/build_rptlist.py --base Set20260101_02.icf --csv Rpt_Export_ID52.csv \
     --groups "1:DV Schweiz,2:DV Deutschland" --replace 1=examples/repeater_dv_schweiz.csv \
     --out Set20260101_03.icf
+
+# ID-31 / ID-51: Repeaterliste gruppenweise zusammenstellen, Simplex-Gruppe des Geräts behalten
+python3 tools/build_rptlist.py --base MeinID31.icf --out Set20260101_02.icf \
+    --group "DV Schweiz=examples/repeater_dv_schweiz.csv" \
+    --group "DV Deutschland=Rpt_Export_ID52.csv#2" --group "Simplex=@keep"
 
 # Repeaterlisten für ID-52E, IC-705, ID-5100, IC-9700
 python3 tools/make_device_lists.py examples/master.csv out/
@@ -64,7 +69,7 @@ dann MENU › SD Card › Load Setting. **Vorher immer ein eigenes Backup speich
 
 - Immer ein ICF **des eigenen Geräts** als Basis verwenden und das Original aufbewahren.
 - Getestet mit: ID-51 (Original, Modell `33900001`), ID-52E, IC-705 (Repeaterliste + Speicherkanäle
-  per CSV). ID-5100 und IC-9700: Formate aus Geräte-Exporten, Import noch nicht getestet.
+  per CSV). ID-31 (Original, `33220001`): Speicherkanäle und DR-Repeaterliste am Gerät getestet. ID-5100 und IC-9700: Formate aus Geräte-Exporten, Import noch nicht getestet.
 - Keine Gewähr – das Laden fremder Daten ins Gerät geschieht auf eigenes Risiko.
 - Die Repeaterdaten in `examples/` sind Beispiele und keine gepflegte Relaisliste.
 

@@ -16,10 +16,10 @@ Die Datenzeilen ergeben zusammen das komplette Speicherabbild des Geräts. CHIRP
 (`chirp.drivers.icf`) liest und schreibt das Format; `tools/build_icf.py` und
 `tools/build_rptlist.py` nutzen dafür CHIRP.
 
-Beobachtete Modell-IDs: ID-51 `33900001`, ID-52E `38670001`, IC-705 `40750001`,
+Beobachtete Modell-IDs: ID-51 `33900001`, ID-31 `33220001`, ID-52E `38670001`, IC-705 `40750001`,
 IC-9700 `39130001`, ID-5100 `34840001`.
 
-## Stolpersteine beim Laden über die SD-Karte (ID-51)
+## Stolpersteine beim Laden über die SD-Karte (ID-51, gilt sinngemäss für den ID-31)
 
 - Ordner: `ID-51/Setting/`, Menü: MENU › SD Card › Load Setting › Datei › ALL.
 - **Dateiname kurz halten** wie vom Gerät vergeben (`Set20260101_01.icf`, 14 Zeichen + Endung). Ein längerer Name wurde vom Gerät nicht angezeigt; die genaue Grenze ist nicht ausgetestet.
@@ -33,6 +33,7 @@ IC-9700 `39130001`, ID-5100 `34840001`.
 | Gerät | ICF-Datei in CHIRP | Alternative |
 |---|---|---|
 | ID-51 (Original) | ja (`id51.py`), Repeaterliste nein → `build_rptlist.py` | – |
+| ID-31 (Original) | ja (`id31.py`), Repeaterliste nein → `build_rptlist.py` | – |
 | ID-5100 | ja (`id5100.py`) | Repeaterliste per CSV |
 | IC-9700 | nein (nur live über CI-V/USB) | Repeaterliste per CSV |
 | IC-705 | nein (auch kein Live-Treiber im geprüften Stand) | Repeaterliste und Speicherkanäle per CSV |
