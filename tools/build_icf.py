@@ -3,7 +3,8 @@
 # Copyright (C) 2026 Chris, HB9HJI – https://www.funkwelt.net
 # Teil von icom-icf-tools. Nutzt CHIRP (https://github.com/kk7ds/chirp, GPLv3).
 """
-build_icf.py – Erzeugt ein Icom ID-51 Cloning-File (.icf) aus einer Kanalliste (CSV).
+build_icf.py – Erzeugt ein Icom-Cloning-File (.icf) aus einer Kanalliste (CSV).
+Unterstützt: ID-51 (Original) und ID-31 (Original, am Gerät getestet). Modell wird erkannt.
 
 Basis ist immer ein Original-ICF des Zielgeräts (MY CALL, Einstellungen,
 D-STAR-Repeaterliste bleiben unangetastet). Nur die 500 Speicherkanäle und
@@ -58,7 +59,7 @@ import logging  # noqa: E402
 logging.basicConfig(level=logging.ERROR)
 from chirp import chirp_common, directory  # noqa: E402
 directory.import_drivers()
-from chirp.drivers import id51  # noqa: E402
+from chirp.drivers import id51, id31  # noqa: E402
 
 
 class ID51Radio(id51.ID51Radio):
@@ -103,17 +104,46 @@ class ID51Radio(id51.ID51Radio):
         self._memobj.banks[number].bank = 0x9F   # wie ein nie benutzter Kanal
         self._memobj.banks[number].index = 0
 
+class ID31Radio(id31.ID31Radio):
+    """ID-31 (Original) – Bank-Byte wie CHIRP-Treiber und Werks-ICF: 0xFF = keine Bank, sonst 0-25.
+    Am Gerät bestätigt."""
+
+    set_mycalls = ID51Radio.set_mycalls
+
+    def clear_memory(self, number):
+        m = chirp_common.Memory()
+        m.number = number
+        m.empty = True
+        self.set_memory(m)
+        self._memobj.banks[number].bank = 0xFF   # wie im Werks-ICF
+        self._memobj.banks[number].index = 0
+
+
+MODELS = {"33900001": (ID51Radio, ("2m", "70cm")), "33220001": (ID31Radio, ("70cm",))}
+BANDS = ("2m", "70cm")
+
+
+def radio_class(path):
+    """Modell aus der ersten Zeile des ICF erkennen."""
+    with open(path, encoding="ascii", errors="replace") as f:
+        mid = f.readline().strip()
+    if mid not in MODELS:
+        sys.exit(f"Modell-ID {mid} nicht unterstützt (bekannt: {', '.join(MODELS)})")
+    global BANDS
+    cls, BANDS = MODELS[mid]
+    return cls
+
+
 DEFAULT_OFFSET = {"2m": 0.6, "70cm": 7.6}
 VALID_MODES = ["FM", "NFM", "AM", "DV"]
 VALID_TMODES = ["", "Tone", "TSQL", "DTCS", "TSQL-R", "DTCS-R"]
 
 
 def band(freq_hz):
-    if 108e6 <= freq_hz <= 174e6:
-        return "2m"
-    if 400e6 <= freq_hz <= 479e6:
-        return "70cm"
-    raise ValueError(f"Frequenz {freq_hz/1e6:.4f} MHz ausserhalb ID-51 (2 m / 70 cm)")
+    b = "2m" if 108e6 <= freq_hz <= 174e6 else "70cm" if 400e6 <= freq_hz <= 479e6 else None
+    if b not in BANDS:
+        raise ValueError(f"Frequenz {freq_hz/1e6:.4f} MHz ausserhalb des Geräts ({' / '.join(BANDS)})")
+    return b
 
 
 def read_csv(path):
@@ -231,7 +261,8 @@ def main():
     ap.add_argument("--dump", action="store_true", help="Kanäle des --base als CSV ausgeben")
     a = ap.parse_args()
 
-    radio = ID51Radio(a.base)
+    cls = radio_class(a.base)
+    radio = cls(a.base)
     if a.dump:
         dump(radio)
         return 0
@@ -311,7 +342,7 @@ def main():
     radio.save_mmap(a.out)
     fix_header(a.out)
     # Rücklesen zur Kontrolle
-    check = ID51Radio(a.out)
+    check = cls(a.out)
     n_check = sum(1 for i in range(lo, hi + 1) if not check.get_memory(i).empty)
     print(f"OK: {written} Kanäle geschrieben, {n_check} beim Rücklesen gefunden → {a.out}")
     print("Banken:", ", ".join(f"{k}={v}" for k, v in sorted(bank_index.items())) or "keine")

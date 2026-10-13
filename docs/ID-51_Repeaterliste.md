@@ -1,4 +1,4 @@
-# Icom ID-51 (Original): Aufbau der D-STAR-Repeaterliste im ICF
+# Icom ID-51 und ID-31 (Original): Aufbau der D-STAR-Repeaterliste im ICF
 
 Der Original-ID-51 hat im Gegensatz zum ID-51 Plus **keinen CSV-Import/-Export**. Die
 DR-Repeaterliste kann nur über CS-51 (Windows, Kabel) oder direkt im Cloning-File (ICF)
@@ -47,6 +47,38 @@ Leerer Eintrag (so im Werks-ICF):
 
 Limits: 750 Einträge, 25 Gruppen, nur 2 m / 70 cm.
 
+## ID-31 (Original)
+
+Der ID-31 (Modell-ID `33220001`, Speicherabbild 0x15500 Byte, nur 70 cm) hat ebenfalls keinen
+CSV-Import. Die Einträge sind **gleich aufgebaut wie beim ID-51** (49 Byte, gleiche Felder, gleicher
+leerer Eintrag), nur Adressen, Grenzen und die 6.25-kHz-Flags sind anders:
+
+| | ID-31 | ID-51 |
+|---|---|---|
+| `repeaters[]` | **0x74C0**, 700 × 49 Byte | 0xA8C0, 750 × 49 Byte |
+| Gateway-Call `rptcall[]` | **0xFABC**, 700 × 7 Byte | 0x1384E |
+| Gruppennamen | **0x10DE0**, 20 × 16 Zeichen | 0x14CD0, 25 × 16 |
+| Sortierindex | **0x14580**, 700 × u16 | 0x19600 |
+| Gruppen-Startindex | **0x14AF8**, 20 × u16 | 0x19BDC |
+| Skip-Bitfeld | **0x14C92**, 1 Bit je Eintrag (LSB zuerst): 1 = beim DR-Scan dabei, 0 = SKIP/leer | Kandidat 0x19D94 (ungeprüft, wird nicht geschrieben) |
+| 6.25-kHz-Raster | Frequenz `0x200000`, Ablage `0x040000` (wie CHIRP bei den Speicherkanälen) | `0xC00000` |
+| Grenzen | 700 Einträge, 20 Gruppen, 70 cm | 750 Einträge, 25 Gruppen, 2 m / 70 cm |
+
+Die Bytes zwischen Gruppen-Startindex und Skip-Bitfeld (0x14B20–0x14C91) gehören nicht zur Liste – nicht anfassen.
+
+**Skip-Bitfeld:** In der Werksliste sind alle 36 Einträge ohne Frequenz und alle leeren Plätze 0, 556 von 566 Funk-Einträgen 1. Am Gerät bestätigt: Nach «Skip Off» für eine Gruppe stehen genau deren Bits auf 1. Wer nur die Einträge neu schreibt, lässt die Skip-Bits der alten Liste auf fremden Einträgen stehen – `build_rptlist.py` setzt das Feld darum immer neu (alle Einträge mit Frequenz = 1); `--fix-skip` korrigiert nur das Feld einer vorhandenen Liste.
+
+Einträge der Werksgruppe «Simplex» haben ein leeres Rufzeichen und Site-Index `0xFFFF`;
+`build_rptlist.py` kann eine solche Gruppe mit `--group "Simplex=@keep"` unverändert übernehmen.
+
+**Prüfung:** Abgeleitet aus einem vom Gerät gespeicherten ICF mit der Werksliste (602 Einträge,
+20 Gruppen). Der Writer schreibt diese komplette Liste **byte-identisch** wieder (ausser den Skip-Bits
+von 10 Werkseinträgen, die der Writer auf «scannen» setzt). **Am Gerät getestet** (Oktober 2026):
+Laden, DR-Liste mit 697 Einträgen in 16 Gruppen, DV-Scan, Near Repeater, Echo-Test.
+
+Das Eintragsformat hat kein Feld für Mode oder Ton: Die DR-Liste von ID-31 und ID-51 (Original)
+enthält nur D-STAR-Relais. FM-Relais gehören in die Speicherkanäle.
+
 ## Unterschied zum ID-52
 
 Im ID-52-ICF sind die Repeater-Einträge 50 Byte lang, und dieselben Flag-Bits stehen
@@ -61,3 +93,9 @@ nutzt aber ein 5-Bit-Feld: Bits 0–4 = Bank (0–25 = A–Z, `0x1F` = keine Ban
 `0x9F` = nie benutzter Kanal, `0x1F` = Kanal ohne Bank, `0x20 | n` = Kanal in Bank n.
 `tools/build_icf.py` schreibt genau diese Muster (am Gerät verifiziert).
 6.25-kHz-Frequenzen in Speicherkanälen: CHIRP-Flag `0x200000` funktioniert am Gerät.
+
+## Speicherkanäle ID-31: Bank-Byte
+
+Das Werks-ICF des ID-31 hat bei allen Kanälen Bank `0xFF` (keine Bank), auch bei einem belegten
+Kanal. `tools/build_icf.py` schreibt darum wie CHIRPs ID-31-Treiber: `0xFF` = keine Bank,
+0–25 = A–Z. Am Gerät bestätigt (Bänke erscheinen mit Namen).
