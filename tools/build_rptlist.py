@@ -219,10 +219,29 @@ def dump(L, mm):
                   f"{'' if L['scan'] is None or (mm[L['scan'] + i // 8] >> (i % 8)) & 1 else ' SKIP'}")
 
 
+def kept_entries(L, mm, s, e):
+    """Einträge s..e-1 des Basis-ICF unverändert übernehmen: ('raw', bytes49, Gateway-Call des Standorts).
+    Der Gateway-Call steht nur beim ersten Eintrag des Standorts, darum über den Site-Index holen."""
+    out = []
+    for i in range(s, e):
+        raw = bytes(mm[L["rpt"] + i * RPT_LEN:L["rpt"] + (i + 1) * RPT_LEN])
+        site = int.from_bytes(raw[5:7], "big")
+        k = i if site == 0xFFFF else site
+        out.append(("raw", raw, bytes(mm[L["rptcall"] + k * 7:L["rptcall"] + (k + 1) * 7])))
+    return out
+
+
+def raw_key(raw):
+    """Rufzeichen+Modul eines übernommenen Eintrags wie e["rpt"] bei CSV-Einträgen ('' wenn leer)."""
+    call, mod = norm_call(_decode_call(list(raw[8:15])))
+    return f"{call:<7}{mod}" if call and mod else ""
+
+
 def write_list(L, mm, groups):
     """groups: [(name, [entry-dict | ('raw', bytes49, bytes7)])] → mm (in place)."""
     flat = [e for _, ents in groups for e in ents]
     site_of = {}
+    head_of = {}      # alter Site-Index → neuer Index des ersten übernommenen Eintrags dieses Standorts
     for i, e in enumerate(flat):
         if isinstance(e, dict):
             site_of.setdefault((e["call"], round(e["lat"], 4), round(e["lon"], 4)), i)
@@ -235,10 +254,13 @@ def write_list(L, mm, groups):
                 mm[p:p + RPT_LEN] = entry_bytes(L, e, site)
                 mm[q:q + 7] = bytes(_encode_call(e["gw"])) if site == i else EMPTY_CALL
             else:      # unverändert übernommener Eintrag (z. B. Simplex), Site-Index neu setzen
-                raw = bytearray(e[1])
+                raw = bytearray(e[1]); gw = e[2]
                 if raw[5:7] != b"\xff\xff":
-                    raw[5:7] = i.to_bytes(2, "big")
-                mm[p:p + RPT_LEN] = bytes(raw); mm[q:q + 7] = e[2]
+                    head = head_of.setdefault(int.from_bytes(raw[5:7], "big"), i)
+                    raw[5:7] = head.to_bytes(2, "big")
+                    if head != i:
+                        gw = EMPTY_CALL
+                mm[p:p + RPT_LEN] = bytes(raw); mm[q:q + 7] = gw
         else:
             mm[p:p + RPT_LEN] = EMPTY_ENTRY; mm[q:q + 7] = EMPTY_CALL
     starts = []; idx = 0
@@ -343,8 +365,9 @@ def main():
             if gname not in base_groups:
                 errors.append(f"Gruppe «{gname}» nicht im Basis-ICF"); continue
             s, e = base_groups[gname]
-            ents = [("raw", bytes(mm[L["rpt"] + i * RPT_LEN:L["rpt"] + (i + 1) * RPT_LEN]),
-                     bytes(mm[L["rptcall"] + i * 7:L["rptcall"] + (i + 1) * 7])) for i in range(s, e)]
+            ents = kept_entries(L, mm, s, e)
+            if not a.no_dedupe:     # übernommene Gruppe bleibt vollständig, zählt aber für spätere Gruppen
+                seen.update(k for k in (raw_key(x[1]) for x in ents) if k)
         else:
             path, sel = payload
             rows = [r for r in read_csv(path) if sel is None or r["Group No"] in sel]
